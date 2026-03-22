@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(where python:*)",
+      "Bash(\"/c/Program Files/Python312/python.exe\" -c \":*)",
+      "Bash(PYTHONIOENCODING=utf-8 \"/c/Program Files/Python312/python.exe\" -c \":*)"
+    ]
+  }
+}
