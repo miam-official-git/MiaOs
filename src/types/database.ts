@@ -16,8 +16,12 @@ export type LeadStatus =
   | 'new'
   | 'contacted'
   | 'qualified'
+  | 'quoted'
+  | 'negotiating'
   | 'rejected'
-  | 'converted';
+  | 'converted'
+  | 'lost'
+  | 'archived';
 
 export type SourcePlatform =
   | 'whatsapp'

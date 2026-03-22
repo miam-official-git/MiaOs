@@ -14,3 +14,11 @@ export function createServiceClient() {
     auth: { persistSession: false },
   });
 }
+
+// Auth-aware client for server-side auth checks
+// Uses the anon key but without session persistence (session comes from browser cookie)
+export function createAuthClient() {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  });
+}

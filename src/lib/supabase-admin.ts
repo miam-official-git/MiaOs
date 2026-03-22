@@ -186,6 +186,29 @@ export async function updateLeadMetadata(
   return lead as Lead;
 }
 
+export async function archiveLead(leadId: string): Promise<Lead> {
+  const sb = createServiceClient();
+  const { data: lead, error } = await sb
+    .from('leads')
+    .update({ status: 'archived' as LeadStatus })
+    .eq('id', leadId)
+    .select('*')
+    .single();
+
+  if (error) throw new Error(`Failed to archive lead: ${error.message}`);
+  return lead as Lead;
+}
+
+export async function softDeleteLead(leadId: string): Promise<void> {
+  const sb = createServiceClient();
+  const { error } = await sb
+    .from('leads')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', leadId);
+
+  if (error) throw new Error(`Failed to delete lead: ${error.message}`);
+}
+
 // ---- Activity Log ----
 
 export async function logActivity(
