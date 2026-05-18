@@ -20,16 +20,47 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LeadStatusBadge } from "@/components/lead-status-badge";
-import { Loader2, Phone, Mail, User, Archive, Trash2, CalendarPlus } from "lucide-react";
+import { Loader2, Phone, Mail, User, Archive, Trash2, CalendarPlus, PhoneCall } from "lucide-react";
 import type { ActivityLog } from "@/types/database";
 import { useAuth } from "@/components/auth-provider";
+import { LogCallDialog } from "@/components/log-call-dialog";
 
 const leadTypeLabels: Record<string, string> = {
-  vocal_lesson: "שיעור פיטנס קולי",
-  chuppah: "שירה בחופה",
+  vocal_lesson: "פיתוח קול",
+  chuppah: "חופה",
   private_event: "אירוע פרטי",
   modeling: "דוגמנות",
+  musical_production: "הפקה מוזיקלית",
+  collaboration: "שיתוף פעולה",
+  international_event: "אירוע בחו״ל",
+  consultation: "פגישת ייעוץ",
+  marriage_proposal: "הצעת נישואין",
   other: "אחר",
+};
+
+const metadataLabels: Record<string, string> = {
+  wedding_date: "תאריך חתונה",
+  venue: "אולם",
+  partner_name: "בן/בת זוג",
+  event_date: "תאריך אירוע",
+  event_location: "מיקום אירוע",
+  event_type: "סוג אירוע",
+  guest_count: "כמות אורחים",
+  lesson_format: "פורמט שיעור",
+  age: "גיל",
+  shoot_date: "תאריך צילומים",
+  shoot_location: "מיקום צילומים",
+  shoot_duration: "אורך צילומים",
+  brand_info: "מותג",
+  project_type: "סוג פרויקט",
+  deadline: "דדליין",
+  collab_details: "פרטי שיתוף פעולה",
+  focus_area: "תחום מיקוד",
+  meeting_type: "סוג פגישה",
+  proposal_date: "תאריך הצעה",
+  proposal_location: "מיקום הצעה",
+  service_details: "פרטי שירות",
+  source: "מקור הגעה",
 };
 
 const statusOptions = [
@@ -78,6 +109,7 @@ export function LeadDetailDialog({
   const [editStatus, setEditStatus] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [confirmAction, setConfirmAction] = useState<"archive" | "delete" | null>(null);
+  const [logCallOpen, setLogCallOpen] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
@@ -256,7 +288,7 @@ export function LeadDetailDialog({
                     <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
                       {Object.entries(lead.metadata).map(([key, val]) => (
                         <div key={key}>
-                          <span className="text-muted-foreground">{key}: </span>
+                          <span className="text-muted-foreground">{metadataLabels[key] ?? key}: </span>
                           <span>{String(val)}</span>
                         </div>
                       ))}
@@ -357,6 +389,16 @@ export function LeadDetailDialog({
                   </div>
                 ) : <div />}
                 <div className="flex items-center gap-2">
+                  {isAdmin && leadId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLogCallOpen(true)}
+                    >
+                      <PhoneCall className="size-4" />
+                      תעד שיחה
+                    </Button>
+                  )}
                   {isAdmin && onCreateBooking && leadId && (
                     <Button
                       variant="outline"
@@ -382,6 +424,16 @@ export function LeadDetailDialog({
           </>
         ) : null}
       </DialogContent>
+
+      <LogCallDialog
+        leadId={leadId}
+        open={logCallOpen}
+        onOpenChange={setLogCallOpen}
+        onSaved={() => {
+          setLogCallOpen(false);
+          if (leadId) fetchLead();
+        }}
+      />
     </Dialog>
   );
 }

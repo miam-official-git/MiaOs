@@ -39,7 +39,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const allowed = ['status', 'payment_method', 'paid_at', 'notes'] as const;
+    const allowed = ['status', 'payment_method', 'payment_stage', 'paid_at', 'notes'] as const;
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) {

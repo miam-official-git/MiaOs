@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Table,
@@ -232,9 +233,13 @@ function LessonsContent() {
               className="cursor-pointer rounded-lg border border-border bg-card/50 p-4 transition-colors active:bg-accent/50"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-foreground text-base">
+                <Link
+                  href={`/contacts/${lesson.leads.contact_id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-medium text-foreground text-base hover:underline hover:text-primary transition-colors"
+                >
                   {lesson.leads.contacts.full_name}
-                </span>
+                </Link>
                 <span className="text-xs text-muted-foreground">
                   שיעור {lesson.lesson_number}/{lesson.total_lessons}
                 </span>
@@ -294,7 +299,13 @@ function LessonsContent() {
                     onClick={() => openDetail(lesson.id)}
                   >
                     <TableCell className="font-medium text-foreground">
-                      {lesson.leads.contacts.full_name}
+                      <Link
+                        href={`/contacts/${lesson.leads.contact_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:underline hover:text-primary transition-colors"
+                      >
+                        {lesson.leads.contacts.full_name}
+                      </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {lesson.lesson_number}/{lesson.total_lessons}

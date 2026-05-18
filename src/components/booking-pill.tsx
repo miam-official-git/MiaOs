@@ -5,55 +5,53 @@ import { Music, Heart, PartyPopper, Camera, MoreHorizontal } from "lucide-react"
 
 const typeConfig: Record<
   string,
-  { label: string; color: string; icon: typeof Music }
+  { label: string; icon: typeof Music }
 > = {
   vocal_lesson: {
     label: "שיעור",
-    color: "blue",
     icon: Music,
   },
   chuppah: {
     label: "חופה",
-    color: "rose",
     icon: Heart,
   },
   private_event: {
     label: "אירוע",
-    color: "amber",
     icon: PartyPopper,
   },
   modeling: {
     label: "דוגמנות",
-    color: "purple",
     icon: Camera,
   },
   other: {
     label: "אחר",
-    color: "gray",
     icon: MoreHorizontal,
   },
 };
 
+const statusToColor: Record<string, string> = {
+  new: "yellow",
+  option: "amber",
+  confirmed: "green",
+  completed: "green",
+  cancelled: "gray",
+};
+
 const colorClasses: Record<string, { solid: string; dashed: string; muted: string }> = {
-  blue: {
-    solid: "bg-blue-500/20 text-blue-300 border-blue-500/40",
-    dashed: "bg-blue-500/10 text-blue-300 border-blue-500/40 border-dashed",
-    muted: "bg-blue-500/10 text-blue-400/60",
-  },
-  rose: {
-    solid: "bg-rose-500/20 text-rose-300 border-rose-500/40",
-    dashed: "bg-rose-500/10 text-rose-300 border-rose-500/40 border-dashed",
-    muted: "bg-rose-500/10 text-rose-400/60",
+  yellow: {
+    solid: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
+    dashed: "bg-yellow-500/10 text-yellow-300 border-yellow-500/40 border-dashed",
+    muted: "bg-yellow-500/10 text-yellow-400/60",
   },
   amber: {
     solid: "bg-amber-500/20 text-amber-300 border-amber-500/40",
     dashed: "bg-amber-500/10 text-amber-300 border-amber-500/40 border-dashed",
     muted: "bg-amber-500/10 text-amber-400/60",
   },
-  purple: {
-    solid: "bg-purple-500/20 text-purple-300 border-purple-500/40",
-    dashed: "bg-purple-500/10 text-purple-300 border-purple-500/40 border-dashed",
-    muted: "bg-purple-500/10 text-purple-400/60",
+  green: {
+    solid: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    dashed: "bg-emerald-500/10 text-emerald-300 border-emerald-500/40 border-dashed",
+    muted: "bg-emerald-500/10 text-emerald-400/60",
   },
   gray: {
     solid: "bg-zinc-500/20 text-zinc-300 border-zinc-500/40",
@@ -62,7 +60,8 @@ const colorClasses: Record<string, { solid: string; dashed: string; muted: strin
   },
 };
 
-function getStatusStyle(status: string, color: string) {
+function getStatusStyle(status: string) {
+  const color = statusToColor[status] ?? "gray";
   const palette = colorClasses[color] ?? colorClasses.gray;
   switch (status) {
     case "confirmed":
@@ -104,7 +103,7 @@ export function BookingPill({
 }: BookingPillProps) {
   const config = typeConfig[bookingType] ?? typeConfig.other;
   const Icon = config.icon;
-  const style = getStatusStyle(status, config.color);
+  const style = getStatusStyle(status);
   const time = formatTime(eventDate);
 
   return (

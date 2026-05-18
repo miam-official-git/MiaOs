@@ -31,10 +31,18 @@ export interface CalendarBooking {
   contact_name: string;
 }
 
+export interface BlockedDateRange {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+}
+
 interface CalendarGridProps {
   year: number;
   month: number; // 1-based
   bookings: CalendarBooking[];
+  blockedPeriods?: BlockedDateRange[];
   onBookingClick?: (bookingId: string) => void;
   onDayClick?: (date: string) => void;
 }
@@ -128,6 +136,7 @@ export function CalendarGrid({
   year,
   month,
   bookings,
+  blockedPeriods = [],
   onBookingClick,
   onDayClick,
 }: CalendarGridProps) {
@@ -138,6 +147,21 @@ export function CalendarGrid({
   useEffect(() => {
     getHolidays(year, month).then(setHolidays).catch(() => setHolidays([]));
   }, [year, month]);
+
+  // Map date strings to blocked period titles
+  const blockedByDate = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const bp of blockedPeriods) {
+      const start = new Date(bp.start_date);
+      const end = new Date(bp.end_date);
+      const cur = new Date(start);
+      while (cur <= end) {
+        map.set(formatDateStr(cur), bp.title);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return map;
+  }, [blockedPeriods]);
 
   // Map date strings to bookings for that day
   const bookingsByDate = useMemo(() => {
@@ -187,6 +211,8 @@ export function CalendarGrid({
           const isShabbat = dow === 6;
           const isFriday = dow === 5;
           const holiday = getHolidayForDate(cell.dateStr, holidays);
+          const blockedTitle = blockedByDate.get(cell.dateStr);
+          const hasConflict = dayBookings.length > 1;
           return (
             <div
               key={cell.dateStr}
@@ -198,20 +224,26 @@ export function CalendarGrid({
               className={cn(
                 "min-h-24 cursor-pointer border-b border-e border-border/60 p-1 transition-colors hover:bg-accent/30",
                 !cell.isCurrentMonth && "bg-muted/30",
-                isShabbat && "bg-rose-500/5",
-                isFriday && "bg-amber-500/5",
+                blockedTitle && "bg-red-500/8",
+                hasConflict && !blockedTitle && "bg-amber-500/5",
+                isShabbat && !blockedTitle && "bg-rose-500/5",
+                isFriday && !blockedTitle && "bg-amber-500/5",
               )}
             >
-              {/* Day number + holiday */}
+              {/* Day number + holiday + blocked */}
               <div className="mb-0.5 flex items-center justify-between">
-                {holiday && (
+                {blockedTitle ? (
+                  <span className="truncate text-[9px] leading-tight text-red-400 font-medium">
+                    {blockedTitle}
+                  </span>
+                ) : holiday ? (
                   <span className={cn(
                     "truncate text-[9px] leading-tight",
                     holiday.isYomTov ? "text-rose-400 font-medium" : "text-amber-400/80",
                   )}>
                     {holiday.name}
                   </span>
-                )}
+                ) : null}
                 <span
                   className={cn(
                     "flex size-6 items-center justify-center rounded-full text-xs ms-auto",

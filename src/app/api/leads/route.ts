@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
       full_name,
       phone: phone || undefined,
       email: email || undefined,
-      manychat_subscriber_id: undefined,
     });
 
     // 2. Create lead

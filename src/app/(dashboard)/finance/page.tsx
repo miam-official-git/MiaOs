@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Table,
@@ -27,7 +28,7 @@ import {
   AlertTriangle,
   Users,
 } from "lucide-react";
-import type { FinanceTransaction, Debtor, ComponentType } from "@/types/database";
+import type { FinanceTransaction, Debtor, ComponentType, PaymentStage } from "@/types/database";
 import { useAuth } from "@/components/auth-provider";
 
 const componentTypeLabels: Record<string, string> = {
@@ -55,6 +56,20 @@ const paymentMethodLabels: Record<string, string> = {
   check: "צ'ק",
   bank_transfer: "העברה בנקאית",
   morning_api: "מורנינג",
+};
+
+const paymentStageLabels: Record<string, string> = {
+  deposit: "מקדמה",
+  interim: "ביניים",
+  final: "סגירה",
+  full: "מלא",
+};
+
+const paymentStageColors: Record<string, string> = {
+  deposit: "bg-blue-500/10 text-blue-500",
+  interim: "bg-purple-500/10 text-purple-500",
+  final: "bg-amber-500/10 text-amber-500",
+  full: "bg-muted text-muted-foreground",
 };
 
 interface TransactionRow extends FinanceTransaction {
@@ -341,6 +356,7 @@ function FinanceContent() {
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
                     <TableHead className="text-right text-muted-foreground">סכום</TableHead>
+                    <TableHead className="text-right text-muted-foreground">שלב</TableHead>
                     <TableHead className="text-right text-muted-foreground">אמצעי תשלום</TableHead>
                     <TableHead className="text-right text-muted-foreground">סטטוס</TableHead>
                     <TableHead className="text-right text-muted-foreground">קשור ל</TableHead>
@@ -352,7 +368,7 @@ function FinanceContent() {
                   {txData?.transactions.length === 0 ? (
                     <TableRow className="border-border">
                       <TableCell
-                        colSpan={6}
+                        colSpan={7}
                         className="py-12 text-center text-muted-foreground"
                       >
                         לא נמצאו עסקאות
@@ -366,6 +382,11 @@ function FinanceContent() {
                       >
                         <TableCell className="font-medium text-foreground" dir="ltr">
                           {formatCurrency(tx.amount)}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${paymentStageColors[tx.payment_stage] ?? paymentStageColors.full}`}>
+                            {paymentStageLabels[tx.payment_stage] ?? tx.payment_stage}
+                          </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {tx.payment_method
@@ -382,13 +403,32 @@ function FinanceContent() {
                           {formatDate(tx.created_at)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => openEdit(tx)}
-                          >
-                            <Eye className="size-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {tx.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-500 hover:text-green-600 text-xs h-7 px-2"
+                                onClick={async () => {
+                                  await fetch(`/api/finance/transactions/${tx.id}/mark-paid`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({}),
+                                  });
+                                  handleSaved();
+                                }}
+                              >
+                                שולם
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => openEdit(tx)}
+                            >
+                              <Eye className="size-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -478,6 +518,7 @@ function FinanceContent() {
                     <TableHead className="text-right text-muted-foreground">שם</TableHead>
                     <TableHead className="text-right text-muted-foreground">טלפון</TableHead>
                     <TableHead className="text-right text-muted-foreground">סוג שירות</TableHead>
+                    <TableHead className="text-right text-muted-foreground">שלב</TableHead>
                     <TableHead className="text-right text-muted-foreground">סכום</TableHead>
                     <TableHead className="text-right text-muted-foreground">תאריך שירות</TableHead>
                     <TableHead className="text-right text-muted-foreground">תזכורת אחרונה</TableHead>
@@ -488,7 +529,7 @@ function FinanceContent() {
                   {debtorData?.debtors.length === 0 ? (
                     <TableRow className="border-border">
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="py-12 text-center text-muted-foreground"
                       >
                         אין חייבים
@@ -501,13 +542,23 @@ function FinanceContent() {
                         className="border-border hover:bg-accent/50"
                       >
                         <TableCell className="font-medium text-foreground">
-                          {debtor.full_name}
+                          <Link
+                            href={`/contacts/${debtor.contact_id}`}
+                            className="hover:underline hover:text-primary transition-colors"
+                          >
+                            {debtor.full_name}
+                          </Link>
                         </TableCell>
                         <TableCell className="text-muted-foreground" dir="ltr">
                           {debtor.phone ?? "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {debtor.source_type === "booking" ? "הזמנה" : "שיעור"}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${paymentStageColors[debtor.payment_stage] ?? paymentStageColors.full}`}>
+                            {paymentStageLabels[debtor.payment_stage] ?? debtor.payment_stage}
+                          </span>
                         </TableCell>
                         <TableCell className="font-medium text-foreground" dir="ltr">
                           {formatCurrency(debtor.amount)}

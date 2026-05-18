@@ -54,10 +54,15 @@ const statusColors: Record<LeadStatus, string> = {
 };
 
 const typeLabels: Record<LeadType, string> = {
-  vocal_lesson: 'שיעור פיטנס קולי',
-  chuppah: 'שירה בחופה',
+  vocal_lesson: 'פיתוח קול',
+  chuppah: 'חופה',
   private_event: 'אירוע פרטי',
   modeling: 'דוגמנות',
+  musical_production: 'הפקה מוזיקלית',
+  collaboration: 'שיתוף פעולה',
+  international_event: 'אירוע בחו״ל',
+  consultation: 'פגישת ייעוץ',
+  marriage_proposal: 'הצעת נישואין',
   other: 'אחר',
 };
 

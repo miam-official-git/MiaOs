@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +11,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarGrid, type CalendarBooking } from "@/components/calendar-grid";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { BookingDialog } from "@/components/booking-dialog";
+import { CreateQuoteDialog } from "@/components/create-quote-dialog";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Plus,
+  Eye,
+  ClipboardList,
+  FileText,
+} from "lucide-react";
+
+const typeLabels: Record<string, string> = {
+  vocal_lesson: "שיעור",
+  chuppah: "חופה",
+  private_event: "אירוע פרטי",
+  modeling: "דוגמנות",
+  other: "אחר",
+};
+
+const statusLabels: Record<string, string> = {
+  new: "חדש",
+  option: "אופציה",
+  confirmed: "מאושר",
+  completed: "הושלם",
+  cancelled: "בוטל",
+};
+
+const statusColors: Record<string, string> = {
+  new: "bg-blue-500/10 text-blue-500",
+  option: "bg-amber-500/10 text-amber-500",
+  confirmed: "bg-green-500/10 text-green-500",
+  completed: "bg-emerald-600/10 text-emerald-600",
+  cancelled: "bg-red-500/10 text-red-500",
+};
 
 const bookingTypeOptions = [
   { value: "", label: "כל הסוגים" },
@@ -37,10 +71,19 @@ interface BookingRow {
   status: string;
   event_date: string;
   event_end_date: string | null;
+  event_start_time: string | null;
+  event_end_time: string | null;
+  total_price: number;
+  location_city: string | null;
+  quote_sent_at: string | null;
+  quote_signed_at: string | null;
   leads: {
+    id: string;
+    contact_id: string;
     contacts: {
       full_name: string;
       phone: string | null;
+      email: string | null;
     };
   };
 }
@@ -52,30 +95,53 @@ interface BookingsResponse {
   limit: number;
 }
 
+const LIMIT = 20;
+
+function formatCurrency(n: number) {
+  return `₪${n.toLocaleString("he-IL")}`;
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("he-IL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatTime(timeStr: string | null) {
+  if (!timeStr) return "";
+  return timeStr.slice(0, 5);
+}
+
 function BookingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const now = new Date();
-  const monthParam = parseInt(searchParams.get("month") ?? String(now.getMonth() + 1), 10);
-  const yearParam = parseInt(searchParams.get("year") ?? String(now.getFullYear()), 10);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const statusFilter = searchParams.get("status") ?? "";
   const typeFilter = searchParams.get("booking_type") ?? "";
 
-  const [month, setMonth] = useState(monthParam);
-  const [year, setYear] = useState(yearParam);
-  const [bookings, setBookings] = useState<CalendarBooking[]>([]);
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editBookingId, setEditBookingId] = useState<string | null>(null);
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [quoteBooking, setQuoteBooking] = useState<BookingRow | null>(null);
+
+  const totalPages = Math.ceil(total / LIMIT);
+
   const updateUrl = useCallback(
-    (m: number, y: number, status?: string, type?: string) => {
+    (p: number, status: string, type: string) => {
       const params = new URLSearchParams();
-      params.set("month", String(m));
-      params.set("year", String(y));
+      if (p > 1) params.set("page", String(p));
       if (status) params.set("status", status);
       if (type) params.set("booking_type", type);
-      router.push(`${pathname}?${params.toString()}`);
+      const qs = params.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname);
     },
     [router, pathname],
   );
@@ -84,164 +150,330 @@ function BookingsContent() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set("month", String(month));
-      params.set("year", String(year));
-      params.set("limit", "200");
+      params.set("page", String(page));
+      params.set("limit", String(LIMIT));
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("booking_type", typeFilter);
 
       const res = await fetch(`/api/bookings?${params.toString()}`);
       if (res.ok) {
         const data: BookingsResponse = await res.json();
-        setBookings(
-          data.bookings.map((b) => ({
-            id: b.id,
-            booking_type: b.booking_type,
-            status: b.status,
-            event_date: b.event_date,
-            event_end_date: b.event_end_date,
-            contact_name: b.leads?.contacts?.full_name ?? "",
-          })),
-        );
+        setBookings(data.bookings);
+        setTotal(data.total);
       }
     } finally {
       setLoading(false);
     }
-  }, [month, year, statusFilter, typeFilter]);
+  }, [page, statusFilter, typeFilter]);
 
   useEffect(() => {
     fetchBookings();
   }, [fetchBookings]);
 
-  const goToPrevMonth = () => {
-    let m = month - 1;
-    let y = year;
-    if (m < 1) {
-      m = 12;
-      y -= 1;
-    }
-    setMonth(m);
-    setYear(y);
-    updateUrl(m, y, statusFilter, typeFilter);
+  const handleEdit = (id: string) => {
+    setEditBookingId(id);
+    setDialogOpen(true);
   };
 
-  const goToNextMonth = () => {
-    let m = month + 1;
-    let y = year;
-    if (m > 12) {
-      m = 1;
-      y += 1;
-    }
-    setMonth(m);
-    setYear(y);
-    updateUrl(m, y, statusFilter, typeFilter);
-  };
-
-  const goToToday = () => {
-    const today = new Date();
-    const m = today.getMonth() + 1;
-    const y = today.getFullYear();
-    setMonth(m);
-    setYear(y);
-    updateUrl(m, y, statusFilter, typeFilter);
-  };
-
-  const handleBookingClick = (bookingId: string) => {
-    // TODO: open booking detail dialog
-    console.log("Booking clicked:", bookingId);
-  };
-
-  const handleDayClick = (date: string) => {
-    // TODO: open new booking dialog for this date
-    console.log("Day clicked:", date);
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setEditBookingId(null);
   };
 
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">הזמנות</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          לוח שנה חודשי וניהול הזמנות
-        </p>
-      </div>
-
-      {/* Controls bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Month navigation */}
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon-sm" onClick={goToNextMonth}>
-            <ChevronRight className="size-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={goToToday}>
-            היום
-          </Button>
-          <Button variant="outline" size="icon-sm" onClick={goToPrevMonth}>
-            <ChevronLeft className="size-4" />
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 me-auto">
-          <Select
-            value={typeFilter}
-            onValueChange={(val) => {
-              updateUrl(month, year, statusFilter, val ?? "");
-            }}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue placeholder="כל הסוגים">{bookingTypeOptions.find(o => o.value === typeFilter)?.label ?? "כל הסוגים"}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {bookingTypeOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={statusFilter}
-            onValueChange={(val) => {
-              updateUrl(month, year, val ?? "", typeFilter);
-            }}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue placeholder="כל הסטטוסים">{statusOptions.find(o => o.value === statusFilter)?.label ?? "כל הסטטוסים"}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">הזמנות</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {total} הזמנות
+          </p>
         </div>
       </div>
 
-      {/* Calendar */}
-      <div className="rounded-lg border border-border bg-card/50 p-2">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={typeFilter}
+          onValueChange={(val) => updateUrl(1, statusFilter, val ?? "")}
+        >
+          <SelectTrigger size="sm" className="w-32">
+            <SelectValue placeholder="כל הסוגים">
+              {bookingTypeOptions.find((o) => o.value === typeFilter)?.label ?? "כל הסוגים"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {bookingTypeOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={statusFilter}
+          onValueChange={(val) => updateUrl(1, val ?? "", typeFilter)}
+        >
+          <SelectTrigger size="sm" className="w-36">
+            <SelectValue placeholder="כל הסטטוסים">
+              {statusOptions.find((o) => o.value === statusFilter)?.label ?? "כל הסטטוסים"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <ClipboardList className="size-12 text-muted-foreground/40 mb-3" />
+          <p className="text-muted-foreground">אין הזמנות</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden sm:block rounded-2xl border border-border bg-card/50 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="px-4 py-3 text-start font-medium text-muted-foreground">לקוח</th>
+                  <th className="px-4 py-3 text-start font-medium text-muted-foreground">סוג</th>
+                  <th className="px-4 py-3 text-start font-medium text-muted-foreground">תאריך</th>
+                  <th className="px-4 py-3 text-start font-medium text-muted-foreground">שעה</th>
+                  <th className="px-4 py-3 text-start font-medium text-muted-foreground">מיקום</th>
+                  <th className="px-4 py-3 text-start font-medium text-muted-foreground">מחיר</th>
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">סטטוס</th>
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">הצעה</th>
+                  <th className="px-4 py-3 w-20"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b) => {
+                  const contact = b.leads?.contacts;
+                  const contactId = b.leads?.contact_id;
+                  const hasQuote = !!b.quote_sent_at;
+                  const quoteSigned = !!b.quote_signed_at;
+
+                  return (
+                    <tr
+                      key={b.id}
+                      className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        {contactId ? (
+                          <Link
+                            href={`/contacts/${contactId}`}
+                            className="font-medium text-foreground hover:text-blue-500 transition-colors"
+                          >
+                            {contact?.full_name ?? "—"}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {typeLabels[b.booking_type] ?? b.booking_type}
+                      </td>
+                      <td className="px-4 py-3 text-foreground">
+                        {formatDate(b.event_date)}
+                        {b.event_end_date && b.event_end_date !== b.event_date && (
+                          <span className="text-muted-foreground"> — {formatDate(b.event_end_date)}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground" dir="ltr">
+                        {b.event_start_time
+                          ? `${formatTime(b.event_start_time)}${b.event_end_time ? `–${formatTime(b.event_end_time)}` : ""}`
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {b.location_city ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {formatCurrency(b.total_price)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[b.status] ?? "bg-muted text-muted-foreground"}`}
+                        >
+                          {statusLabels[b.status] ?? b.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {hasQuote ? (
+                          quoteSigned ? (
+                            <span className="text-xs text-green-500 font-medium">חתום ✓</span>
+                          ) : (
+                            <span className="text-xs text-amber-500 font-medium">נשלח</span>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setQuoteBooking(b);
+                              setQuoteDialogOpen(true);
+                            }}
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
+                            title="הצעת מחיר"
+                          >
+                            <FileText className="size-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEdit(b.id)}
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                            title="צפייה"
+                          >
+                            <Eye className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <CalendarGrid
-            year={year}
-            month={month}
-            bookings={bookings}
-            onBookingClick={handleBookingClick}
-            onDayClick={handleDayClick}
-          />
-        )}
-      </div>
+
+          {/* Mobile cards */}
+          <div className="flex flex-col gap-2 sm:hidden">
+            {bookings.map((b) => {
+              const contact = b.leads?.contacts;
+              const contactId = b.leads?.contact_id;
+
+              return (
+                <div
+                  key={b.id}
+                  className="rounded-2xl border border-border bg-card/50 p-4"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      {contactId ? (
+                        <Link
+                          href={`/contacts/${contactId}`}
+                          className="font-medium text-foreground hover:text-blue-500 transition-colors"
+                        >
+                          {contact?.full_name ?? "—"}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-foreground">—</span>
+                      )}
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {typeLabels[b.booking_type] ?? b.booking_type}
+                        {b.location_city && ` · ${b.location_city}`}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${statusColors[b.status] ?? "bg-muted text-muted-foreground"}`}
+                    >
+                      {statusLabels[b.status] ?? b.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-foreground">{formatDate(b.event_date)}</span>
+                      {b.event_start_time && (
+                        <span className="text-muted-foreground" dir="ltr">
+                          {formatTime(b.event_start_time)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground text-sm">
+                        {formatCurrency(b.total_price)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setQuoteBooking(b);
+                          setQuoteDialogOpen(true);
+                        }}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-colors"
+                      >
+                        <FileText className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(b.id)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                      >
+                        <Eye className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                disabled={page >= totalPages}
+                onClick={() => updateUrl(page + 1, statusFilter, typeFilter)}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground px-2">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                disabled={page <= 1}
+                onClick={() => updateUrl(page - 1, statusFilter, typeFilter)}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Edit Dialog */}
+      {dialogOpen && editBookingId && (
+        <BookingDialog
+          mode="edit"
+          bookingId={editBookingId}
+          open={dialogOpen}
+          onOpenChange={handleDialogClose}
+          onSaved={fetchBookings}
+        />
+      )}
+
+      {/* Quote Dialog */}
+      {quoteDialogOpen && quoteBooking && (
+        <CreateQuoteDialog
+          open={quoteDialogOpen}
+          onOpenChange={(open) => {
+            setQuoteDialogOpen(open);
+            if (!open) setQuoteBooking(null);
+          }}
+          booking={quoteBooking}
+          onCreated={() => fetchBookings()}
+        />
+      )}
     </div>
   );
 }
 
-export default function BookingsPage() {
+export default function BookingsManagePage() {
   return (
     <Suspense
       fallback={

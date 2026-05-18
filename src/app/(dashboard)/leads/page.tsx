@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Table,
@@ -21,19 +22,33 @@ import { ChevronLeft, ChevronRight, Eye, Loader2, Plus } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 
 const leadTypeLabels: Record<string, string> = {
-  vocal_lesson: "שיעור פיטנס קולי",
-  chuppah: "שירה בחופה",
+  vocal_lesson: "פיתוח קול",
+  chuppah: "חופה",
   private_event: "אירוע פרטי",
   modeling: "דוגמנות",
+  musical_production: "הפקה מוזיקלית",
+  collaboration: "שיתוף פעולה",
+  international_event: "אירוע בחו״ל",
+  consultation: "פגישת ייעוץ",
+  marriage_proposal: "הצעת נישואין",
   other: "אחר",
 };
 
+function getEventDate(metadata: Record<string, unknown> | null): string | null {
+  if (!metadata) return null;
+  return (metadata.wedding_date ?? metadata.event_date ?? metadata.shoot_date
+    ?? metadata.proposal_date ?? metadata.deadline ?? metadata.requested_date) as string | null;
+}
+
 interface LeadRow {
   id: string;
+  contact_id: string;
   lead_type: string;
   status: string;
   notes: string | null;
   created_at: string;
+  updated_at: string;
+  metadata: Record<string, unknown> | null;
   contacts: { full_name: string; phone: string | null; email: string | null };
 }
 
@@ -160,7 +175,13 @@ function LeadsContent() {
                   הערות
                 </TableHead>
                 <TableHead className="text-right text-muted-foreground">
-                  תאריך
+                  תאריך אירוע
+                </TableHead>
+                <TableHead className="text-right text-muted-foreground">
+                  נוצר
+                </TableHead>
+                <TableHead className="text-right text-muted-foreground">
+                  השתנה
                 </TableHead>
                 <TableHead className="text-right text-muted-foreground">
                   פעולות
@@ -171,7 +192,7 @@ function LeadsContent() {
               {data?.leads.length === 0 ? (
                 <TableRow className="border-border">
                   <TableCell
-                    colSpan={7}
+                    colSpan={9}
                     className="py-12 text-center text-muted-foreground"
                   >
                     לא נמצאו לידים
@@ -184,7 +205,12 @@ function LeadsContent() {
                     className="border-border hover:bg-accent/50"
                   >
                     <TableCell className="font-medium text-foreground">
-                      {lead.contacts.full_name}
+                      <Link
+                        href={`/contacts/${lead.contact_id}`}
+                        className="hover:underline hover:text-primary transition-colors"
+                      >
+                        {lead.contacts.full_name}
+                      </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground" dir="ltr">
                       {lead.contacts.phone ?? "—"}
@@ -199,7 +225,15 @@ function LeadsContent() {
                       {lead.notes ?? "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
+                      {getEventDate(lead.metadata)
+                        ? formatDate(getEventDate(lead.metadata)!)
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {formatDate(lead.created_at)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(lead.updated_at)}
                     </TableCell>
                     <TableCell>
                       <Button

@@ -10,6 +10,11 @@ export type LeadType =
   | 'chuppah'
   | 'private_event'
   | 'modeling'
+  | 'musical_production'
+  | 'collaboration'
+  | 'international_event'
+  | 'consultation'
+  | 'marriage_proposal'
   | 'other';
 
 export type LeadStatus =
@@ -26,7 +31,9 @@ export type LeadStatus =
 export type SourcePlatform =
   | 'whatsapp'
   | 'instagram'
+  | 'facebook'
   | 'tiktok'
+  | 'youtube'
   | 'website'
   | 'referral'
   | 'other';
@@ -69,6 +76,8 @@ export type TransactionStatus =
   | 'failed'
   | 'refunded';
 
+export type PaymentStage = 'deposit' | 'interim' | 'final' | 'full';
+
 export type FollowUpType =
   | 'quote_reminder'
   | 'payment_reminder'
@@ -78,6 +87,34 @@ export type FollowUpType =
 export type ActorType = 'system' | 'omer' | 'mia' | 'bot';
 
 export type UserRole = 'admin' | 'talent' | 'bot';
+
+// ---- Green API / Messages enums ----
+
+export type MessageDirection = 'inbound' | 'outbound';
+
+export type MessageContentType =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'voice'
+  | 'document'
+  | 'location'
+  | 'contact'
+  | 'sticker'
+  | 'other';
+
+export type TriageSessionStatus =
+  | 'awaiting_language'
+  | 'awaiting_name'
+  | 'awaiting_response'
+  | 'collecting_details'
+  | 'awaiting_date'
+  | 'completed'
+  | 'paused'
+  | 'expired';
+
+export type TriageLanguage = 'he' | 'en';
 
 // ---- Metadata shapes per lead type ----
 
@@ -128,6 +165,7 @@ export interface Contact {
   phone: string | null;
   email: string | null;
   manychat_subscriber_id: string | null;
+  whatsapp_chat_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -142,6 +180,7 @@ export interface Lead {
   manychat_subscriber_id: string | null;
   rejection_reason: string | null;
   metadata: LeadMetadata;
+  notes: string | null;
   ai_summary: string | null;
   assigned_to: string | null;
   deleted_at: string | null;
@@ -164,6 +203,8 @@ export interface Booking {
   quote_sent_at: string | null;
   quote_signed_at: string | null;
   quote_url: string | null;
+  event_start_time: string | null;
+  event_end_time: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -202,6 +243,7 @@ export interface FinanceTransaction {
   amount: number;
   payment_method: PaymentMethod | null;
   status: TransactionStatus;
+  payment_stage: PaymentStage;
   morning_receipt_id: string | null;
   due_date: string | null;
   paid_at: string | null;
@@ -245,6 +287,7 @@ export interface Debtor {
   amount: number;
   due_date: string | null;
   debtor_reminder_sent_at: string | null;
+  payment_stage: PaymentStage;
   service_date: string;
 }
 
@@ -267,6 +310,152 @@ export interface DashboardStats {
   overdue_followups: number;
 }
 
+// ---- Messages & Triage ----
+
+export interface Message {
+  id: string;
+  contact_id: string | null;
+  direction: MessageDirection;
+  message_type: MessageContentType;
+  content: string | null;
+  sender_phone: string | null;
+  sender_name: string | null;
+  chat_id: string;
+  greenapi_id_message: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface TriageSession {
+  id: string;
+  contact_id: string | null;
+  chat_id: string;
+  status: TriageSessionStatus;
+  language: TriageLanguage | null;
+  selected_service: LeadType | null;
+  requested_date: string | null;
+  current_step: number;
+  collected_data: Record<string, string>;
+  triage_message_sent_at: string | null;
+  response_received_at: string | null;
+  selected_lead_type: LeadType | null;
+  paused_until: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CommunicationType = 'phone_call' | 'meeting' | 'email' | 'note';
+
+export interface CommunicationLog {
+  id: string;
+  contact_id: string;
+  comm_type: CommunicationType;
+  direction: MessageDirection | null;
+  summary: string;
+  details: Record<string, unknown>;
+  logged_by: ActorType;
+  created_at: string;
+}
+
+export interface ContactNote {
+  id: string;
+  contact_id: string;
+  content: string;
+  author: ActorType;
+  created_at: string;
+}
+
+// ---- Calendar: Blocked Periods & Reminders ----
+
+export type ReminderType = 'day_before' | 'hour_before' | 'custom';
+
+export interface BlockedPeriod {
+  id: string;
+  title: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  created_by: ActorType;
+  created_at: string;
+}
+
+export interface Reminder {
+  id: string;
+  contact_id: string | null;
+  booking_id: string | null;
+  lesson_id: string | null;
+  reminder_type: ReminderType;
+  scheduled_for: string;
+  sent_at: string | null;
+  message_text: string | null;
+  created_at: string;
+}
+
+// ---- Automation ----
+
+export type AutomationTriggerType =
+  | 'lead_stale'
+  | 'quote_unsigned'
+  | 'payment_overdue'
+  | 'post_event'
+  | 'triage_stale';
+
+export type AutomationActionType = 'create_followup' | 'send_whatsapp' | 'both';
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description: string | null;
+  trigger_type: AutomationTriggerType;
+  delay_hours: number;
+  action_type: AutomationActionType;
+  message_template: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ---- Quotes ----
+
+export interface QuoteItem {
+  name: string;
+  description?: string;
+  amount: number;
+  is_included: boolean;
+}
+
+export interface QuotePaymentTerms {
+  deposit_percent: number;
+  deposit_amount: number;
+  deposit_due: string;
+  final_amount: number;
+  final_due: string;
+  payment_methods: string[];
+  notes?: string;
+}
+
+export interface Quote {
+  id: string;
+  booking_id: string;
+  token: string;
+  title: string;
+  description: string | null;
+  items: QuoteItem[];
+  total_amount: number;
+  payment_terms: QuotePaymentTerms;
+  general_terms: string | null;
+  valid_until: string | null;
+  sent_at: string | null;
+  sent_via: string | null;
+  viewed_at: string | null;
+  signer_name: string | null;
+  signer_id_number: string | null;
+  signature_data: string | null;
+  signed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ---- Insert types (omit auto-generated fields) ----
 
 export type ContactInsert = Omit<Contact, 'id' | 'created_at' | 'updated_at'>;
@@ -277,3 +466,10 @@ export type LessonInsert = Omit<Lesson, 'id' | 'created_at' | 'updated_at' | 'de
 export type FinanceTransactionInsert = Omit<FinanceTransaction, 'id' | 'created_at' | 'updated_at'>;
 export type FollowUpInsert = Omit<FollowUp, 'id' | 'created_at'>;
 export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at'>;
+export type MessageInsert = Omit<Message, 'id' | 'created_at'>;
+export type TriageSessionInsert = Omit<TriageSession, 'id' | 'created_at' | 'updated_at'>;
+export type ContactNoteInsert = Omit<ContactNote, 'id' | 'created_at'>;
+export type CommunicationLogInsert = Omit<CommunicationLog, 'id' | 'created_at'>;
+export type BlockedPeriodInsert = Omit<BlockedPeriod, 'id' | 'created_at'>;
+export type ReminderInsert = Omit<Reminder, 'id' | 'created_at'>;
+export type QuoteInsert = Omit<Quote, 'id' | 'token' | 'created_at' | 'updated_at' | 'sent_at' | 'sent_via' | 'viewed_at' | 'signer_name' | 'signer_id_number' | 'signature_data' | 'signed_at'>;

@@ -5,9 +5,14 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  UserCircle,
   Calendar,
+  ClipboardList,
   GraduationCap,
   DollarSign,
+  MessageCircle,
+  BarChart3,
+  Settings2,
   Menu,
   LogOut,
   Sun,
@@ -30,9 +35,14 @@ import { useTheme } from "@/components/theme-provider";
 const navItems = [
   { href: "/", label: "דשבורד", icon: LayoutDashboard },
   { href: "/leads", label: "לידים", icon: Users },
-  { href: "/bookings", label: "הזמנות", icon: Calendar },
+  { href: "/contacts", label: "אנשי קשר", icon: UserCircle },
+  { href: "/calendar", label: "יומן", icon: Calendar },
+  { href: "/bookings", label: "הזמנות", icon: ClipboardList },
   { href: "/lessons", label: "שיעורים", icon: GraduationCap },
   { href: "/finance", label: "כספים", icon: DollarSign },
+  { href: "/simulator", label: "סימולטור", icon: MessageCircle },
+  { href: "/reports", label: "דוחות", icon: BarChart3 },
+  { href: "/settings", label: "הגדרות", icon: Settings2 },
 ];
 
 function SidebarContent() {
