@@ -64,6 +64,13 @@ const chuppahFlow: ServiceFlow = {
           : { text: "מעולה! ומה שם האולם בו אתם צפויים להתחתן?" },
     },
     {
+      field: "venue_city",
+      getMessage: (lang) =>
+        lang === "en"
+          ? { text: "And in which city is the venue located?" }
+          : { text: "ובאיזו עיר נמצא האולם?" },
+    },
+    {
       field: "partner_name",
       getMessage: (lang) =>
         lang === "en"

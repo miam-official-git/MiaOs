@@ -153,6 +153,45 @@ export function BookingDialog({
     }
   }, [mode, bookingId]);
 
+  // ---- Auto-populate from lead data (create mode) ----
+
+  const fetchLeadData = useCallback(async () => {
+    if (mode !== "create" || !leadId) return;
+    try {
+      const res = await fetch(`/api/leads/${leadId}`);
+      if (!res.ok) return;
+      const lead = await res.json();
+
+      if (lead.lead_type) setBookingType(lead.lead_type);
+
+      const meta = lead.metadata ?? {};
+      const dateStr = meta.wedding_date || meta.event_date || meta.proposal_date || meta.shoot_date;
+      if (dateStr) {
+        const defaultStartTimes: Record<string, string> = {
+          chuppah: "18:00",
+          private_event: "19:00",
+          vocal_lesson: "10:00",
+        };
+        const defaultEndTimes: Record<string, string> = {
+          chuppah: "23:00",
+          private_event: "23:00",
+          vocal_lesson: "11:00",
+        };
+        const type = lead.lead_type || "other";
+        const startTime = defaultStartTimes[type] ?? "18:00";
+        const endTime = defaultEndTimes[type] ?? "23:00";
+        setEventDate(`${dateStr}T${startTime}`);
+        setEventEndDate(`${dateStr}T${endTime}`);
+      }
+
+      if (meta.venue) setLocationAddress(String(meta.venue));
+      if (meta.city || meta.venue_city) setLocationCity(String(meta.city || meta.venue_city));
+      if (meta.event_location) setLocationCity(String(meta.event_location));
+    } catch {
+      /* ignore — user can fill manually */
+    }
+  }, [mode, leadId]);
+
   // Check if warm intro is done for chuppah bookings
   useEffect(() => {
     if (!open || bookingType !== "chuppah") {
@@ -184,9 +223,10 @@ export function BookingDialog({
         setNotes("");
         setComponents([]);
         setConflicts([]);
+        fetchLeadData();
       }
     }
-  }, [open, mode, fetchBooking]);
+  }, [open, mode, fetchBooking, fetchLeadData]);
 
   // ---- Conflict detection ----
 
@@ -310,26 +350,27 @@ export function BookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden p-0">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle>
-                {mode === "create" ? "הזמנה חדשה" : "עריכת הזמנה"}
-              </DialogTitle>
-              {mode === "edit" && booking?.contact && (
-                <DialogDescription>
-                  {booking.contact.full_name}
-                </DialogDescription>
-              )}
-            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 flex flex-col gap-4">
+              <DialogHeader>
+                <DialogTitle>
+                  {mode === "create" ? "הזמנה חדשה" : "עריכת הזמנה"}
+                </DialogTitle>
+                {mode === "edit" && booking?.contact && (
+                  <DialogDescription>
+                    {booking.contact.full_name}
+                  </DialogDescription>
+                )}
+              </DialogHeader>
 
-            {/* Form fields */}
-            <div className="flex flex-col gap-3">
+              {/* Form fields */}
+              <div className="flex flex-col gap-3">
               {/* Booking type */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-foreground">
@@ -493,7 +534,9 @@ export function BookingDialog({
                 </>
               )}
 
-            <DialogFooter>
+            </div>
+
+            <DialogFooter className="border-t bg-background px-6 py-3">
               <Button
                 onClick={handleSave}
                 disabled={saving || !eventDate}

@@ -41,6 +41,7 @@ const leadTypeLabels: Record<string, string> = {
 const metadataLabels: Record<string, string> = {
   wedding_date: "תאריך חתונה",
   venue: "אולם",
+  venue_city: "עיר האולם",
   partner_name: "בן/בת זוג",
   event_date: "תאריך אירוע",
   event_location: "מיקום אירוע",
@@ -206,90 +207,127 @@ export function LeadDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden p-0">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : lead ? (
           <>
-            <DialogHeader>
-              <DialogTitle>{lead.contacts.full_name}</DialogTitle>
-              <DialogDescription>
-                {leadTypeLabels[lead.lead_type] ?? lead.lead_type}
-              </DialogDescription>
-            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 flex flex-col gap-4">
+              <DialogHeader>
+                <DialogTitle>{lead.contacts.full_name}</DialogTitle>
+                <DialogDescription>
+                  {leadTypeLabels[lead.lead_type] ?? lead.lead_type}
+                </DialogDescription>
+              </DialogHeader>
 
-            {/* Contact Info */}
-            <div className="flex flex-col gap-2 text-sm text-foreground">
-              {lead.contacts.phone && (
+              {/* Contact Info */}
+              <div className="flex flex-col gap-2 text-sm text-foreground">
+                {lead.contacts.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="size-4 text-muted-foreground" />
+                    <span dir="ltr">{lead.contacts.phone}</span>
+                  </div>
+                )}
+                {lead.contacts.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="size-4 text-muted-foreground" />
+                    <span>{lead.contacts.email}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
-                  <Phone className="size-4 text-muted-foreground" />
-                  <span dir="ltr">{lead.contacts.phone}</span>
+                  <User className="size-4 text-muted-foreground" />
+                  <span>נוצר: {formatDate(lead.created_at)}</span>
                 </div>
-              )}
-              {lead.contacts.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="size-4 text-muted-foreground" />
-                  <span>{lead.contacts.email}</span>
+              </div>
+
+              <Separator />
+
+              {/* Editable Fields */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-foreground">
+                    סטטוס
+                  </label>
+                  <Select value={editStatus} onValueChange={(val) => setEditStatus(val ?? "")} disabled={!isAdmin}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>{statusOptions.find(o => o.value === editStatus)?.label}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-              <div className="flex items-center gap-2">
-                <User className="size-4 text-muted-foreground" />
-                <span>נוצר: {formatDate(lead.created_at)}</span>
-              </div>
-            </div>
 
-            <Separator />
-
-            {/* Editable Fields */}
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">
-                  סטטוס
-                </label>
-                <Select value={editStatus} onValueChange={(val) => setEditStatus(val ?? "")} disabled={!isAdmin}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue>{statusOptions.find(o => o.value === editStatus)?.label}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-foreground">
+                    הערות
+                  </label>
+                  <Textarea
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    placeholder="הוסף הערות..."
+                    rows={3}
+                    disabled={!isAdmin}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">
-                  הערות
-                </label>
-                <Textarea
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="הוסף הערות..."
-                  rows={3}
-                  disabled={!isAdmin}
-                />
-              </div>
-            </div>
+              {/* Metadata */}
+              {lead.metadata &&
+                Object.keys(lead.metadata).length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="mb-2 text-sm font-medium text-foreground">
+                        מידע נוסף
+                      </h4>
+                      <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                        {Object.entries(lead.metadata).map(([key, val]) => (
+                          <div key={key}>
+                            <span className="text-muted-foreground">{metadataLabels[key] ?? key}: </span>
+                            <span>{String(val)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
-            {/* Metadata */}
-            {lead.metadata &&
-              Object.keys(lead.metadata).length > 0 && (
+              {/* Activity Log */}
+              {lead.activity_log.length > 0 && (
                 <>
                   <Separator />
                   <div>
                     <h4 className="mb-2 text-sm font-medium text-foreground">
-                      מידע נוסף
+                      לוג פעילות
                     </h4>
-                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                      {Object.entries(lead.metadata).map(([key, val]) => (
-                        <div key={key}>
-                          <span className="text-muted-foreground">{metadataLabels[key] ?? key}: </span>
-                          <span>{String(val)}</span>
+                    <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                      {lead.activity_log.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="flex items-start gap-2 rounded-md bg-accent/50 px-3 py-2 text-xs"
+                        >
+                          <div className="mt-0.5 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
+                          <div className="flex-1">
+                            <span className="font-medium text-foreground">
+                              {entry.action}
+                            </span>
+                            {entry.details && Object.keys(entry.details).length > 0 && (
+                              <span className="text-muted-foreground">
+                                {" — "}
+                                {JSON.stringify(entry.details)}
+                              </span>
+                            )}
+                            <div className="mt-0.5 text-muted-foreground/70">
+                              {formatDate(entry.created_at)} · {entry.actor}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -297,73 +335,38 @@ export function LeadDetailDialog({
                 </>
               )}
 
-            {/* Activity Log */}
-            {lead.activity_log.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-foreground">
-                    לוג פעילות
-                  </h4>
-                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                    {lead.activity_log.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="flex items-start gap-2 rounded-md bg-accent/50 px-3 py-2 text-xs"
-                      >
-                        <div className="mt-0.5 size-1.5 shrink-0 rounded-full bg-muted-foreground" />
-                        <div className="flex-1">
-                          <span className="font-medium text-foreground">
-                            {entry.action}
-                          </span>
-                          {entry.details && Object.keys(entry.details).length > 0 && (
-                            <span className="text-muted-foreground">
-                              {" — "}
-                              {JSON.stringify(entry.details)}
-                            </span>
-                          )}
-                          <div className="mt-0.5 text-muted-foreground/70">
-                            {formatDate(entry.created_at)} · {entry.actor}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              {/* Confirm bar */}
+              {confirmAction && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-center justify-between gap-3">
+                  <p className="text-sm text-foreground">
+                    {confirmAction === "archive"
+                      ? "להעביר ליד זה לארכיון?"
+                      : "למחוק ליד זה? (לא ניתן לשחזר)"}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmAction(null)}
+                      disabled={saving}
+                    >
+                      ביטול
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={confirmAction === "archive" ? handleArchive : handleDelete}
+                      disabled={saving}
+                    >
+                      {saving && <Loader2 className="size-4 animate-spin" />}
+                      {confirmAction === "archive" ? "העבר לארכיון" : "מחק"}
+                    </Button>
                   </div>
                 </div>
-              </>
-            )}
+              )}
+            </div>
 
-            {/* Confirm bar */}
-            {confirmAction && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-center justify-between gap-3">
-                <p className="text-sm text-foreground">
-                  {confirmAction === "archive"
-                    ? "להעביר ליד זה לארכיון?"
-                    : "למחוק ליד זה? (לא ניתן לשחזר)"}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setConfirmAction(null)}
-                    disabled={saving}
-                  >
-                    ביטול
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={confirmAction === "archive" ? handleArchive : handleDelete}
-                    disabled={saving}
-                  >
-                    {saving && <Loader2 className="size-4 animate-spin" />}
-                    {confirmAction === "archive" ? "העבר לארכיון" : "מחק"}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
+            <DialogFooter className="border-t bg-background px-6 py-3">
               <div className="flex w-full items-center justify-between">
                 {isAdmin ? (
                   <div className="flex items-center gap-2">
