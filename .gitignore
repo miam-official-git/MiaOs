@@ -31,3 +31,5 @@ supabase/.temp/
 
 # data
 data/*.db
+
+.vercel
