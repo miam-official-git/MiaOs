@@ -368,6 +368,22 @@ export function LeadDetailDialog({
                 </>
               )}
 
+              {/* Convert to client */}
+              {isAdmin && lead && lead.status !== "converted" && (
+                <>
+                  <Separator />
+                  <Button
+                    onClick={handleConvertToClient}
+                    disabled={saving}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    {saving && <Loader2 className="size-4 animate-spin" />}
+                    <UserCheck className="size-4" />
+                    העבר ללקוח
+                  </Button>
+                </>
+              )}
+
               {/* Confirm bar */}
               {confirmAction && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-center justify-between gap-3">
@@ -433,17 +449,6 @@ export function LeadDetailDialog({
                     >
                       <PhoneCall className="size-4" />
                       תעד שיחה
-                    </Button>
-                  )}
-                  {isAdmin && leadId && lead && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleConvertToClient}
-                      disabled={saving}
-                    >
-                      <UserCheck className="size-4" />
-                      העבר ללקוח
                     </Button>
                   )}
                   {isAdmin && onCreateBooking && leadId && (
