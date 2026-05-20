@@ -346,36 +346,32 @@ function FinanceContent() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions">
-          <div className="rounded-lg border border-border bg-card/50">
-            {loading && !txData ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="size-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-right text-muted-foreground">סכום</TableHead>
-                    <TableHead className="text-right text-muted-foreground">שלב</TableHead>
-                    <TableHead className="text-right text-muted-foreground">אמצעי תשלום</TableHead>
-                    <TableHead className="text-right text-muted-foreground">סטטוס</TableHead>
-                    <TableHead className="text-right text-muted-foreground">קשור ל</TableHead>
-                    <TableHead className="text-right text-muted-foreground">תאריך</TableHead>
-                    <TableHead className="text-right text-muted-foreground">פעולות</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {txData?.transactions.length === 0 ? (
-                    <TableRow className="border-border">
-                      <TableCell
-                        colSpan={7}
-                        className="py-12 text-center text-muted-foreground"
-                      >
-                        לא נמצאו עסקאות
-                      </TableCell>
+          {loading && !txData ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : txData?.transactions.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              לא נמצאו עסקאות
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block rounded-lg border border-border bg-card/50">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-right text-muted-foreground">סכום</TableHead>
+                      <TableHead className="text-right text-muted-foreground">שלב</TableHead>
+                      <TableHead className="text-right text-muted-foreground">אמצעי תשלום</TableHead>
+                      <TableHead className="text-right text-muted-foreground">סטטוס</TableHead>
+                      <TableHead className="text-right text-muted-foreground">קשור ל</TableHead>
+                      <TableHead className="text-right text-muted-foreground">תאריך</TableHead>
+                      <TableHead className="text-right text-muted-foreground">פעולות</TableHead>
                     </TableRow>
-                  ) : (
-                    txData?.transactions.map((tx) => (
+                  </TableHeader>
+                  <TableBody>
+                    {txData?.transactions.map((tx) => (
                       <TableRow
                         key={tx.id}
                         className="border-border hover:bg-accent/50"
@@ -431,12 +427,67 @@ function FinanceContent() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="flex flex-col gap-2 sm:hidden">
+                {txData?.transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="rounded-lg border border-border bg-card/50 p-3"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground" dir="ltr">
+                          {formatCurrency(tx.amount)}
+                        </span>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${paymentStageColors[tx.payment_stage] ?? paymentStageColors.full}`}>
+                          {paymentStageLabels[tx.payment_stage] ?? tx.payment_stage}
+                        </span>
+                      </div>
+                      <TransactionStatusBadge status={tx.status} />
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="text-muted-foreground">
+                        {linkedLabel(tx)}
+                        <span className="mx-1">·</span>
+                        {formatDate(tx.created_at)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {tx.status === "pending" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-500 hover:text-green-600 text-xs h-7 px-2"
+                            onClick={async () => {
+                              await fetch(`/api/finance/transactions/${tx.id}/mark-paid`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({}),
+                              });
+                              handleSaved();
+                            }}
+                          >
+                            שולם
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => openEdit(tx)}
+                        >
+                          <Eye className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -506,37 +557,33 @@ function FinanceContent() {
 
         {/* Debtors Tab */}
         <TabsContent value="debtors">
-          <div className="rounded-lg border border-border bg-card/50">
-            {debtorLoading && !debtorData ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="size-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-right text-muted-foreground">שם</TableHead>
-                    <TableHead className="text-right text-muted-foreground">טלפון</TableHead>
-                    <TableHead className="text-right text-muted-foreground">סוג שירות</TableHead>
-                    <TableHead className="text-right text-muted-foreground">שלב</TableHead>
-                    <TableHead className="text-right text-muted-foreground">סכום</TableHead>
-                    <TableHead className="text-right text-muted-foreground">תאריך שירות</TableHead>
-                    <TableHead className="text-right text-muted-foreground">תזכורת אחרונה</TableHead>
-                    <TableHead className="text-right text-muted-foreground">פעולות</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {debtorData?.debtors.length === 0 ? (
-                    <TableRow className="border-border">
-                      <TableCell
-                        colSpan={8}
-                        className="py-12 text-center text-muted-foreground"
-                      >
-                        אין חייבים
-                      </TableCell>
+          {debtorLoading && !debtorData ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : debtorData?.debtors.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              אין חייבים
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block rounded-lg border border-border bg-card/50">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-right text-muted-foreground">שם</TableHead>
+                      <TableHead className="text-right text-muted-foreground">טלפון</TableHead>
+                      <TableHead className="text-right text-muted-foreground">סוג שירות</TableHead>
+                      <TableHead className="text-right text-muted-foreground">שלב</TableHead>
+                      <TableHead className="text-right text-muted-foreground">סכום</TableHead>
+                      <TableHead className="text-right text-muted-foreground">תאריך שירות</TableHead>
+                      <TableHead className="text-right text-muted-foreground">תזכורת אחרונה</TableHead>
+                      <TableHead className="text-right text-muted-foreground">פעולות</TableHead>
                     </TableRow>
-                  ) : (
-                    debtorData?.debtors.map((debtor) => (
+                  </TableHeader>
+                  <TableBody>
+                    {debtorData?.debtors.map((debtor) => (
                       <TableRow
                         key={debtor.transaction_id}
                         className="border-border hover:bg-accent/50"
@@ -582,12 +629,54 @@ function FinanceContent() {
                           />
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="flex flex-col gap-2 sm:hidden">
+                {debtorData?.debtors.map((debtor) => (
+                  <div
+                    key={debtor.transaction_id}
+                    className="rounded-lg border border-border bg-card/50 p-3"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/contacts/${debtor.contact_id}`}
+                          className="font-medium text-foreground hover:text-primary transition-colors"
+                        >
+                          {debtor.full_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {debtor.source_type === "booking" ? "הזמנה" : "שיעור"}
+                          <span className="mx-1">·</span>
+                          {formatDate(debtor.service_date)}
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${paymentStageColors[debtor.payment_stage] ?? paymentStageColors.full}`}>
+                        {paymentStageLabels[debtor.payment_stage] ?? debtor.payment_stage}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-foreground" dir="ltr">
+                        {formatCurrency(debtor.amount)}
+                      </span>
+                      <WhatsAppReminder
+                        transactionId={debtor.transaction_id}
+                        phone={debtor.phone}
+                        name={debtor.full_name}
+                        amount={debtor.amount}
+                        serviceType={debtor.source_type}
+                        onSent={fetchDebtors}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           {debtorData && (
             <p className="mt-2 text-center text-xs text-muted-foreground/70">
@@ -615,28 +704,17 @@ function FinanceContent() {
                   className="rounded-lg border border-border bg-card/50 overflow-hidden"
                 >
                   {/* Event header */}
-                  <div className="flex items-center justify-between gap-3 border-b border-border bg-accent/30 px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <Users className="size-4 text-muted-foreground" />
-                      <div>
-                        <span className="font-medium text-foreground">
-                          {event.client_name}
-                        </span>
-                        <span className="mx-2 text-muted-foreground/50">|</span>
-                        <span className="text-sm text-muted-foreground">
-                          {bookingTypeLabels[event.booking_type] ?? event.booking_type}
-                        </span>
-                        {event.location_city && (
-                          <>
-                            <span className="mx-2 text-muted-foreground/50">|</span>
-                            <span className="text-sm text-muted-foreground">
-                              {event.location_city}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-accent/30 px-4 py-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Users className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="font-medium text-foreground truncate">
+                        {event.client_name}
+                      </span>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {bookingTypeLabels[event.booking_type] ?? event.booking_type}
+                      </span>
                     </div>
-                    <div className="text-left">
+                    <div className="text-left shrink-0">
                       <div className="text-sm text-muted-foreground">
                         {formatDate(event.event_date)}
                       </div>

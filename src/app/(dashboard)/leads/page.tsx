@@ -164,23 +164,23 @@ function LeadsContent() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-right text-muted-foreground">שם</TableHead>
-                <TableHead className="text-right text-muted-foreground">
+                <TableHead className="hidden sm:table-cell text-right text-muted-foreground">
                   טלפון
                 </TableHead>
                 <TableHead className="text-right text-muted-foreground">סוג</TableHead>
                 <TableHead className="text-right text-muted-foreground">
                   סטטוס
                 </TableHead>
-                <TableHead className="text-right text-muted-foreground">
+                <TableHead className="hidden lg:table-cell text-right text-muted-foreground">
                   הערות
                 </TableHead>
-                <TableHead className="text-right text-muted-foreground">
+                <TableHead className="hidden md:table-cell text-right text-muted-foreground">
                   תאריך אירוע
                 </TableHead>
-                <TableHead className="text-right text-muted-foreground">
+                <TableHead className="hidden lg:table-cell text-right text-muted-foreground">
                   נוצר
                 </TableHead>
-                <TableHead className="text-right text-muted-foreground">
+                <TableHead className="hidden lg:table-cell text-right text-muted-foreground">
                   השתנה
                 </TableHead>
                 <TableHead className="text-right text-muted-foreground">
@@ -192,7 +192,7 @@ function LeadsContent() {
               {data?.leads.length === 0 ? (
                 <TableRow className="border-border">
                   <TableCell
-                    colSpan={9}
+                    colSpan={99}
                     className="py-12 text-center text-muted-foreground"
                   >
                     לא נמצאו לידים
@@ -212,7 +212,7 @@ function LeadsContent() {
                         {lead.contacts.full_name}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-muted-foreground" dir="ltr">
+                    <TableCell className="hidden sm:table-cell text-muted-foreground" dir="ltr">
                       {lead.contacts.phone ?? "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
@@ -221,18 +221,18 @@ function LeadsContent() {
                     <TableCell>
                       <LeadStatusBadge status={lead.status} />
                     </TableCell>
-                    <TableCell className="max-w-32 truncate text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell max-w-32 truncate text-muted-foreground">
                       {lead.notes ?? "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden md:table-cell text-muted-foreground">
                       {getEventDate(lead.metadata)
                         ? formatDate(getEventDate(lead.metadata)!)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
                       {formatDate(lead.created_at)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">
                       {formatDate(lead.updated_at)}
                     </TableCell>
                     <TableCell>

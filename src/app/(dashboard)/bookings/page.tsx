@@ -198,7 +198,7 @@ function BookingsContent() {
           value={typeFilter}
           onValueChange={(val) => updateUrl(1, statusFilter, val ?? "")}
         >
-          <SelectTrigger size="sm" className="w-32">
+          <SelectTrigger size="sm" className="flex-1 sm:w-32 sm:flex-none">
             <SelectValue placeholder="כל הסוגים">
               {bookingTypeOptions.find((o) => o.value === typeFilter)?.label ?? "כל הסוגים"}
             </SelectValue>
@@ -216,7 +216,7 @@ function BookingsContent() {
           value={statusFilter}
           onValueChange={(val) => updateUrl(1, val ?? "", typeFilter)}
         >
-          <SelectTrigger size="sm" className="w-36">
+          <SelectTrigger size="sm" className="flex-1 sm:w-36 sm:flex-none">
             <SelectValue placeholder="כל הסטטוסים">
               {statusOptions.find((o) => o.value === statusFilter)?.label ?? "כל הסטטוסים"}
             </SelectValue>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -129,8 +130,15 @@ export function DesktopSidebar() {
 
 /** Mobile sidebar - hamburger toggle via Sheet */
 export function MobileSidebar() {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
           <Button variant="ghost" size="icon" className="md:hidden text-sidebar-foreground" />
@@ -144,5 +152,19 @@ export function MobileSidebar() {
         <SidebarContent />
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Theme toggle for mobile header */
+export function ThemeToggleButton() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      title={theme === "dark" ? "מצב בהיר" : "מצב כהה"}
+    >
+      {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+    </button>
   );
 }

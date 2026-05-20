@@ -58,40 +58,42 @@ export function LeadFilters() {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Select
-        value={currentStatus}
-        onValueChange={(val) => updateParams("status", val ?? "")}
-      >
-        <SelectTrigger className="w-40">
-          <SelectValue placeholder="סטטוס">{statusOptions.find(o => o.value === currentStatus)?.label ?? "סטטוס"}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {statusOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2">
+        <Select
+          value={currentStatus}
+          onValueChange={(val) => updateParams("status", val ?? "")}
+        >
+          <SelectTrigger className="flex-1 sm:w-40">
+            <SelectValue placeholder="סטטוס">{statusOptions.find(o => o.value === currentStatus)?.label ?? "סטטוס"}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {statusOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <Select
-        value={currentType}
-        onValueChange={(val) => updateParams("lead_type", val ?? "")}
-      >
-        <SelectTrigger className="w-44">
-          <SelectValue placeholder="סוג ליד">{typeOptions.find(o => o.value === currentType)?.label ?? "סוג ליד"}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {typeOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select
+          value={currentType}
+          onValueChange={(val) => updateParams("lead_type", val ?? "")}
+        >
+          <SelectTrigger className="flex-1 sm:w-44">
+            <SelectValue placeholder="סוג ליד">{typeOptions.find(o => o.value === currentType)?.label ?? "סוג ליד"}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {typeOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <div className="relative flex-1 min-w-48">
+      <div className="relative flex-1 min-w-0 sm:min-w-48">
         <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
           placeholder="חיפוש לפי שם או טלפון..."
