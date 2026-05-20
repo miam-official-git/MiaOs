@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,9 +24,10 @@ import { Loader2 } from "lucide-react";
 import type { AttendanceStatus, PaymentStatus } from "@/types/database";
 import { useAuth } from "@/components/auth-provider";
 
-interface ContactOption {
+interface ClientOption {
   lead_id: string;
   full_name: string;
+  phone: string | null;
 }
 
 interface LessonDetail {
@@ -73,7 +74,11 @@ export function LessonDialog({
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [contacts, setContacts] = useState<ContactOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedName, setSelectedName] = useState("");
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const [leadId, setLeadId] = useState("");
   const [lessonNumber, setLessonNumber] = useState(1);
@@ -91,6 +96,8 @@ export function LessonDialog({
 
   const resetForm = useCallback(() => {
     setLeadId("");
+    setSelectedName("");
+    setSearchQuery("");
     setLessonNumber(1);
     setTotalLessons(1);
     setScheduledAt("");
@@ -101,17 +108,17 @@ export function LessonDialog({
     setMiaNotes("");
   }, []);
 
-  // Fetch contacts for the lead select
-  const fetchContacts = useCallback(async () => {
+  const fetchClients = useCallback(async () => {
     try {
-      const res = await fetch("/api/leads?limit=100&status=converted");
+      const res = await fetch("/api/clients?client_type=vocal_lesson&status=active");
       if (!res.ok) return;
       const data = await res.json();
-      setContacts(
+      setClients(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data.leads.map((l: any) => ({
-          lead_id: l.id,
-          full_name: l.contacts.full_name,
+        data.clients.map((c: any) => ({
+          lead_id: c.lead_id,
+          full_name: c.contacts.full_name,
+          phone: c.contacts.phone,
         })),
       );
     } catch {
@@ -128,6 +135,7 @@ export function LessonDialog({
       if (!res.ok) return;
       const data: LessonDetail = await res.json();
       setLeadId(data.lead_id);
+      setSelectedName(data.leads?.contacts?.full_name ?? "");
       setLessonNumber(data.lesson_number);
       setTotalLessons(data.total_lessons);
       setScheduledAt(data.scheduled_at.slice(0, 16)); // datetime-local format
@@ -143,14 +151,14 @@ export function LessonDialog({
 
   useEffect(() => {
     if (open) {
-      fetchContacts();
+      fetchClients();
       if (isEdit) {
         fetchLesson();
       } else {
         resetForm();
       }
     }
-  }, [open, isEdit, fetchContacts, fetchLesson, resetForm]);
+  }, [open, isEdit, fetchClients, fetchLesson, resetForm]);
 
   // Fetch student lesson history when in edit mode
   useEffect(() => {
@@ -229,23 +237,73 @@ export function LessonDialog({
             </DialogHeader>
 
             <div className="flex flex-col gap-3">
-              {/* Student select */}
-              <div>
+              {/* Student autocomplete */}
+              <div className="relative">
                 <label className="mb-1 block text-sm font-medium text-foreground">
                   תלמיד/ה
                 </label>
-                <Select value={leadId} onValueChange={(val) => setLeadId(val ?? "")} disabled={isEdit}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="בחר תלמיד/ה">{contacts.find(c => c.lead_id === leadId)?.full_name}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contacts.map((c) => (
-                      <SelectItem key={c.lead_id} value={c.lead_id}>
-                        {c.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isEdit ? (
+                  <Input value={selectedName} disabled />
+                ) : (
+                  <>
+                    <Input
+                      placeholder="הקלד שם לחיפוש..."
+                      value={searchQuery || selectedName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSearchQuery(val);
+                        setSelectedName("");
+                        setLeadId("");
+                        setShowSuggestions(val.length > 0);
+                      }}
+                      onFocus={() => {
+                        if (searchQuery.length > 0 || clients.length > 0) {
+                          setShowSuggestions(true);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setShowSuggestions(false), 200);
+                      }}
+                    />
+                    {showSuggestions && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-md max-h-48 overflow-y-auto"
+                      >
+                        {clients
+                          .filter((c) =>
+                            !searchQuery || c.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+                          )
+                          .map((c) => (
+                            <button
+                              key={c.lead_id}
+                              type="button"
+                              className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-accent transition-colors text-start"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setLeadId(c.lead_id);
+                                setSelectedName(c.full_name);
+                                setSearchQuery("");
+                                setShowSuggestions(false);
+                              }}
+                            >
+                              <span className="font-medium text-foreground">{c.full_name}</span>
+                              {c.phone && (
+                                <span className="text-xs text-muted-foreground" dir="ltr">{c.phone}</span>
+                              )}
+                            </button>
+                          ))}
+                        {clients.filter((c) =>
+                          !searchQuery || c.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            לא נמצאו לקוחות
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Lesson number & total */}

@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LeadStatusBadge } from "@/components/lead-status-badge";
-import { Loader2, Phone, Mail, User, Archive, Trash2, CalendarPlus, PhoneCall } from "lucide-react";
+import { Loader2, Phone, Mail, User, Archive, Trash2, CalendarPlus, PhoneCall, UserCheck } from "lucide-react";
 import type { ActivityLog } from "@/types/database";
 import { useAuth } from "@/components/auth-provider";
 import { LogCallDialog } from "@/components/log-call-dialog";
@@ -78,6 +78,7 @@ const statusOptions = [
 
 interface LeadDetail {
   id: string;
+  contact_id: string;
   lead_type: string;
   status: string;
   rejection_reason: string | null;
@@ -192,6 +193,38 @@ export function LeadDetailDialog({
     } finally {
       setSaving(false);
       setConfirmAction(null);
+    }
+  };
+
+  const handleConvertToClient = async () => {
+    if (!lead) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact_id: lead.contact_id,
+          lead_id: lead.id,
+          client_type: lead.lead_type,
+        }),
+      });
+      if (res.ok) {
+        if (lead.status !== "converted") {
+          await fetch(`/api/leads/${lead.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "converted" }),
+          });
+        }
+        onSaved();
+        onOpenChange(false);
+      } else {
+        const err = await res.json();
+        alert(err.error ?? "שגיאה ביצירת לקוח");
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -400,6 +433,17 @@ export function LeadDetailDialog({
                     >
                       <PhoneCall className="size-4" />
                       תעד שיחה
+                    </Button>
+                  )}
+                  {isAdmin && leadId && lead && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleConvertToClient}
+                      disabled={saving}
+                    >
+                      <UserCheck className="size-4" />
+                      העבר ללקוח
                     </Button>
                   )}
                   {isAdmin && onCreateBooking && leadId && (

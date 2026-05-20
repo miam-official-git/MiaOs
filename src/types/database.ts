@@ -253,6 +253,20 @@ export interface FinanceTransaction {
   updated_at: string;
 }
 
+export type ClientStatus = 'active' | 'inactive';
+
+export interface Client {
+  id: string;
+  contact_id: string;
+  lead_id: string | null;
+  client_type: LeadType;
+  status: ClientStatus;
+  client_since: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface FollowUp {
   id: string;
   lead_id: string | null;
@@ -468,6 +482,7 @@ export type FollowUpInsert = Omit<FollowUp, 'id' | 'created_at'>;
 export type ActivityLogInsert = Omit<ActivityLog, 'id' | 'created_at'>;
 export type MessageInsert = Omit<Message, 'id' | 'created_at'>;
 export type TriageSessionInsert = Omit<TriageSession, 'id' | 'created_at' | 'updated_at'>;
+export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
 export type ContactNoteInsert = Omit<ContactNote, 'id' | 'created_at'>;
 export type CommunicationLogInsert = Omit<CommunicationLog, 'id' | 'created_at'>;
 export type BlockedPeriodInsert = Omit<BlockedPeriod, 'id' | 'created_at'>;
